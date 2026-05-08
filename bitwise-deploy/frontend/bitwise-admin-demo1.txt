@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bitwise Bank Admin | Démo Autonome</title>
+  <!-- CDN pour graphiques & exports (optionnel si offline) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    :root { --primary:#1e40af; --primary-dark:#1e3a8a; --success:#059669; --warning:#d97706; --danger:#dc2626; --bg:#f8fafc; --bg-card:#ffffff; --bg-input:#ffffff; --text:#1e293b; --text-muted:#64748b; --border:#e2e8f0; --sidebar:#ffffff; --hover:#eff6ff; --shadow:0 4px 6px -1px rgba(0,0,0,0.1); }
+    [data-theme="dark"] { --bg:#0f172a; --bg-card:#1e293b; --bg-input:#334155; --text:#f1f5f9; --text-muted:#94a3b8; --border:#334155; --sidebar:#1e293b; --hover:#334155; --shadow:0 4px 6px -1px rgba(0,0,0,0.3); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; transition: background 0.3s, color 0.3s; }
+    a { color: var(--primary); text-decoration: none; } button { cursor: pointer; font-family: inherit; }
+    input, select, textarea { background: var(--bg-input); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.75rem; width: 100%; transition: border 0.2s; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); }
+    .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
+    .login-card { background: var(--bg-card); padding: 2.5rem; border-radius: 16px; box-shadow: var(--shadow); width: 100%; max-width: 400px; }
+    .app-layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+    .sidebar { background: var(--sidebar); border-right: 1px solid var(--border); padding: 1.5rem 1rem; display: flex; flex-direction: column; }
+    .sidebar-brand { font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 2rem; display: flex; align-items: center; gap: 0.5rem; }
+    .nav-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: var(--text); border-radius: 8px; margin-bottom: 0.25rem; transition: background 0.2s; }
+    .nav-link:hover, .nav-link.active { background: var(--hover); color: var(--primary); }
+    .main-content { padding: 2rem; }
+    .page { display: none; animation: fadeIn 0.3s; } .page.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .btn { padding: 0.6rem 1rem; background: var(--primary); color: white; border: none; border-radius: 6px; font-weight: 500; transition: background 0.2s; }
+    .btn:hover { background: var(--primary-dark); }
+    .btn-sm { padding: 0.35rem 0.7rem; font-size: 0.85rem; border-radius: 5px; }
+    .btn-success { background: var(--success); } .btn-warning { background: var(--warning); color: #000; } .btn-danger { background: var(--danger); } .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; box-shadow: var(--shadow); }
+    .grid { display: grid; gap: 1rem; } .grid-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); } .grid-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); } .stat-label { color: var(--text-muted); font-size: 0.85rem; }
+    .badge { padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.75rem; font-weight: 600; }
+    .badge-active { background: #dcfce7; color: #166534; } .badge-pending { background: #fef3c7; color: #92400e; } .badge-blocked { background: #fee2e2; color: #991b1b; } .badge-info { background: #dbeafe; color: #1e40af; }
+    .table-wrap { overflow-x: auto; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.8rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: var(--hover); font-weight: 600; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
+    .actions { display: flex; gap: 0.4rem; }
+    .pagination { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-top: 1px solid var(--border); }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal { background: var(--bg-card); padding: 1.5rem; border-radius: 12px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow); transform: translateY(10px); transition: transform 0.2s; }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border); }
+    .modal-close { background: none; border: none; font-size: 1.5rem; color: var(--text-muted); line-height: 1; }
+    .modal-footer { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
+    .form-group { margin-bottom: 1rem; } .form-group label { display: block; margin-bottom: 0.3rem; font-weight: 500; font-size: 0.9rem; }
+    .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 2000; display: flex; flex-direction: column; gap: 0.5rem; }
+    .toast { padding: 0.8rem 1rem; background: var(--bg-card); border-left: 4px solid var(--primary); border-radius: 6px; box-shadow: var(--shadow); min-width: 250px; animation: slideIn 0.3s; }
+    .toast-success { border-color: var(--success); } .toast-error { border-color: var(--danger); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .hidden { display: none !important; } .flex { display: flex; } .gap-2 { gap: 0.5rem; } .items-center { align-items: center; } .justify-between { justify-content: space-between; } .text-center { text-align: center; } .mt-2 { margin-top: 0.5rem; } .mb-2 { margin-bottom: 0.5rem; }
+    #themeToggle { position: fixed; bottom: 1.5rem; right: 1.5rem; width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 1.2rem; box-shadow: var(--shadow); z-index: 100; transition: transform 0.2s; }
+    #themeToggle:hover { transform: scale(1.1); }
+    canvas { max-width: 100%; }
+    .loading { text-align: center; padding: 2rem; color: var(--text-muted); }
+    .demo-badge { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background: var(--warning); color: #000; padding: 4px 12px; border-radius: 99px; font-size: 0.8rem; font-weight: 600; z-index: 9999; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    @media (max-width: 768px) { .app-layout { grid-template-columns: 1fr; } .sidebar { display: none; position: fixed; inset: 0; z-index: 50; padding: 2rem; background: var(--bg); } .sidebar.mobile-open { display: flex; } }
+  </style>
+</head>
+<body>
+  <div class="demo-badge">🧪 MODE DÉMO AUTONOME (Aucun serveur requis)</div>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- LOGIN -->
+  <div id="loginView" class="login-container">
+    <div class="login-card text-center">
+      <h1 style="color:var(--primary);margin-bottom:0.5rem">🏦 Bitwise Bank</h1>
+      <p style="color:var(--text-muted);margin-bottom:1.5rem">Administration</p>
+      <form id="loginForm">
+        <div class="form-group"><input type="email" id="loginEmail" placeholder="Email (n'importe lequel)" required></div>
+        <div class="form-group"><input type="password" id="loginPass" placeholder="Mot de passe" required></div>
+        <button type="submit" class="btn" style="width:100%">Se connecter</button>
+      </form>
+      <p class="mt-2" style="font-size:0.8rem;color:var(--text-muted)">© 2026 Bitwise Bank</p>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="appView" class="app-layout hidden">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">🏦 Bitwise Bank</div>
+      <nav>
+        <a href="#" class="nav-link active" data-page="dashboard">📊 Dashboard</a>
+        <a href="#" class="nav-link" data-page="clients">👥 Clients</a>
+        <a href="#" class="nav-link" data-page="transactions">💸 Transactions</a>
+        <a href="#" class="nav-link" data-page="codes">🔢 Codes</a>
+        <a href="#" class="nav-link" data-page="audit">📋 Audit</a>
+        <a href="#" class="nav-link" data-page="settings">⚙️ Paramètres</a>
+      </nav>
+      <div style="margin-top:auto;padding-top:1.5rem;border-top:1px solid var(--border)">
+        <div id="adminInfo" style="font-size:0.85rem;margin-bottom:0.5rem"></div>
+        <button id="logoutBtn" class="btn btn-danger btn-sm" style="width:100%">Déconnexion</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <section id="pageDashboard" class="page active">
+        <h1 class="mb-2">📊 Tableau de bord</h1>
+        <div class="grid grid-3" id="statsGrid">
+          <div class="card"><div class="stat-value" id="statClients">-</div><div class="stat-label">Clients totaux</div></div>
+          <div class="card"><div class="stat-value" id="statActive">-</div><div class="stat-label">Clients actifs</div></div>
+          <div class="card"><div class="stat-value" id="statBalance">-</div><div class="stat-label">Solde total (EUR)</div></div>
+        </div>
+        <div class="grid grid-2 mt-2">
+          <div class="card"><canvas id="statusChart" height="250"></canvas></div>
+          <div class="card"><canvas id="txChart" height="250"></canvas></div>
+        </div>
+        <div class="card mt-2"><canvas id="balanceChart" height="150"></canvas></div>
+      </section>
+
+      <section id="pageClients" class="page">
+        <div class="flex justify-between items-center mb-2">
+          <h1>👥 Clients</h1>
+          <div class="flex gap-2"><input type="text" id="clientSearch" placeholder="Rechercher..." style="width:200px"><button id="clientSearchBtn" class="btn btn-sm">🔍</button></div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>ID</th><th>Nom</th><th>Email</th><th>IBAN</th><th>Solde</th><th>KYC</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="clientsTbody"></tbody></table>
+          <div class="pagination"><button id="clientPrev" class="btn btn-sm btn-ghost" disabled>←</button><span id="clientPageInfo">Page 1</span><button id="clientNext" class="btn btn-sm btn-ghost">→</button></div>
+        </div>
+      </section>
+
+      <section id="pageClientDetail" class="page">
+        <div class="flex justify-between items-center mb-2">
+          <button class="btn btn-sm btn-ghost" onclick="App.navTo('clients')">← Retour</button>
+          <div class="flex gap-2"><button class="btn btn-sm" id="editClientBtn">✏️ Modifier</button><button class="btn btn-sm btn-warning" id="toggleStatusBtn">⏸️ Suspendre</button></div>
+        </div>
+        <div class="grid grid-3" id="clientDetailInfo"></div>
+        <div class="card mt-2"><h3 class="mb-2">💸 Dernières transactions</h3><table><thead><tr><th>ID</th><th>Type</th><th>Montant</th><th>Statut</th><th>Date</th></tr></thead><tbody id="clientTxTbody"></tbody></table></div>
+      </section>
+
+      <section id="pageTransactions" class="page">
+        <div class="flex justify-between items-center mb-2">
+          <h1>💸 Transactions</h1>
+          <div class="flex gap-2"><button class="btn btn-sm" onclick="Export.toCSV('transactions')">📄 CSV</button><button class="btn btn-sm btn-success" onclick="Modal.open('txModal')">➕ Nouvelle</button></div>
+        </div>
+        <div class="flex gap-2 mb-2">
+          <select id="txTypeFilter" style="width:150px"><option value="">Tous types</option><option value="transfer">Virement</option><option value="deposit">Dépôt</option><option value="withdrawal">Retrait</option></select>
+          <select id="txStatusFilter" style="width:150px"><option value="">Tous statuts</option><option value="pending">En attente</option><option value="completed">Complétée</option><option value="blocked">Bloquée</option></select>
+          <button id="txFilterBtn" class="btn btn-sm">🔍 Filtrer</button>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>ID</th><th>Client</th><th>Type</th><th>Montant</th><th>Statut</th><th>Date</th><th>Actions</th></tr></thead><tbody id="txTbody"></tbody></table>
+          <div class="pagination"><button id="txPrev" class="btn btn-sm btn-ghost" disabled>←</button><span id="txPageInfo">Page 1</span><button id="txNext" class="btn btn-sm btn-ghost">→</button></div>
+        </div>
+      </section>
+
+      <section id="pageCodes" class="page">
+        <div class="flex justify-between items-center mb-2">
+          <h1>🔢 Codes de validation</h1>
+          <button class="btn btn-sm btn-success" onclick="Modal.open('codeModal')">➘ Générer</button>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Code</th><th>Type</th><th>Destinataire</th><th>Statut</th><th>Expire dans</th><th>Actions</th></tr></thead><tbody id="codesTbody"></tbody></table>
+          <div class="pagination"><button id="codePrev" class="btn btn-sm btn-ghost" disabled>←</button><span id="codePageInfo">Page 1</span><button id="codeNext" class="btn btn-sm btn-ghost">→</button></div>
+        </div>
+      </section>
+
+      <section id="pageAudit" class="page">
+        <div class="flex justify-between items-center mb-2">
+          <h1>📋 Logs d'audit</h1>
+          <div class="flex gap-2"><select id="auditSeverity" style="width:130px"><option value="">Toutes sévérités</option><option value="low">🟢 Basse</option><option value="medium">🟡 Moyenne</option><option value="high">🔴 Haute</option></select><button id="auditExportBtn" class="btn btn-sm">📥 Exporter</button></div>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Date</th><th>Action</th><th>Utilisateur</th><th>Détails</th><th>IP</th><th>Sévérité</th></tr></thead><tbody id="auditTbody"></tbody></table></div>
+        <div class="pagination"><button id="auditPrev" class="btn btn-sm btn-ghost" disabled>←</button><span id="auditPageInfo">Page 1</span><button id="auditNext" class="btn btn-sm btn-ghost">→</button></div>
+      </section>
+
+      <section id="pageSettings" class="page">
+        <h1 class="mb-2">⚙️ Paramètres</h1>
+        <div class="card" style="max-width:500px">
+          <h3 class="mb-2">🎨 Apparence</h3>
+          <div class="flex gap-2 mt-2">
+            <button class="btn btn-sm" onclick="Theme.set('light')">☀️ Clair</button>
+            <button class="btn btn-sm" onclick="Theme.set('dark')">🌙 Sombre</button>
+            <button class="btn btn-sm btn-ghost" onclick="Theme.set('auto')">🖥️ Système</button>
+          </div>
+          <div class="form-group mt-2"><label>URL API (Démo: ignorée)</label><input type="text" id="apiUrlInput" value="/api/admin" disabled></div>
+          <button class="btn btn-sm btn-success" onclick="Utils.toast('Mode démo actif. Aucun serveur nécessaire.','success')">✅ Connecté en local</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODALS -->
+  <div class="modal-overlay" id="txModal"><div class="modal"><div class="modal-header"><h3>➕ Nouvelle transaction</h3><button class="modal-close" onclick="Modal.close('txModal')">&times;</button></div><form id="txForm"><div class="grid grid-2"><div class="form-group"><label>Client ID *</label><input type="number" id="txClientId" required></div><div class="form-group"><label>Type *</label><select id="txType" required><option value="transfer">Virement</option><option value="deposit">Dépôt</option><option value="withdrawal">Retrait</option></select></div><div class="form-group"><label>Montant *</label><input type="number" step="0.01" id="txAmount" required></div><div class="form-group"><label>Devise</label><select id="txCurrency"><option value="EUR">EUR</option><option value="USD">USD</option></select></div></div><div class="form-group"><label>IBAN Bénéficiaire</label><input type="text" id="txIban"></div><div class="form-group"><label>Description</label><textarea id="txDesc" rows="2"></textarea></div><div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="Modal.close('txModal')">Annuler</button><button type="submit" class="btn btn-success">Créer</button></div></form></div></div>
+
+  <div class="modal-overlay" id="codeModal"><div class="modal"><div class="modal-header"><h3>🔢 Générer un code</h3><button class="modal-close" onclick="Modal.close('codeModal')">&times;</button></div><form id="codeForm"><div class="form-group"><label>Type *</label><select id="codeType" required><option value="email">📧 Email</option><option value="sms">📱 SMS</option><option value="2fa">🔐 2FA</option><option value="transaction">💸 Transaction</option></select></div><div class="form-group"><label>Destinataire *</label><input type="text" id="codeRecipient" required></div><div class="form-group"><label>Expiration (min)</label><input type="number" id="codeExpiry" value="15" min="1"></div><div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="Modal.close('codeModal')">Annuler</button><button type="submit" class="btn btn-success">Générer</button></div></form></div></div>
+
+  <div class="modal-overlay" id="editClientModal"><div class="modal"><div class="modal-header"><h3>✏️ Modifier client</h3><button class="modal-close" onclick="Modal.close('editClientModal')">&times;</button></div><form id="editClientForm"><div class="grid grid-2"><div class="form-group"><label>Nom</label><input type="text" id="editName"></div><div class="form-group"><label>Téléphone</label><input type="text" id="editPhone"></div><div class="form-group"><label>IBAN</label><input type="text" id="editIban"></div><div class="form-group"><label>Statut KYC</label><select id="editKyc"><option value="pending">En attente</option><option value="verified">Vérifié</option></select></div></div><div class="form-group"><label>Statut Compte</label><select id="editStatus"><option value="active">Actif</option><option value="suspended">Suspendu</option></select></div><div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="Modal.close('editClientModal')">Annuler</button><button type="submit" class="btn btn-success">Enregistrer</button></div></form></div></div>
+
+  <button id="themeToggle" title="Changer de thème">🌙</button>
+
+  <script>
+    /* === MOCK DATABASE === */
+    const MockDB = {
+      admin: { id: 1, email: 'admin@bitwise.bank', full_name: 'Super Admin', role: 'superadmin' },
+      clients: [
+        { id: 101, full_name: 'Jean Dupont', email: 'jean.d@email.com', phone: '+33612345678', iban: 'FR7630006000011234567890189', bic_swift: 'BNPAFRPP', available_balance: 15420.50, kyc_status: 'verified', account_status: 'active', created_at: '2025-01-15T10:00:00', updated_at: '2025-01-20T14:30:00' },
+        { id: 102, full_name: 'Marie Martin', email: 'marie.m@email.com', phone: '+33698765432', iban: 'FR7630006000011234567890190', bic_swift: 'SOGEFRPP', available_balance: 8950.00, kyc_status: 'pending', account_status: 'active', created_at: '2025-02-10T09:15:00', updated_at: '2025-02-12T11:00:00' },
+        { id: 103, full_name: 'Lucas Bernard', email: 'lucas.b@email.com', phone: '+33655555555', iban: 'FR7630006000011234567890191', bic_swift: 'CEPAFRPP', available_balance: 2450.25, kyc_status: 'rejected', account_status: 'suspended', created_at: '2024-11-05T16:45:00', updated_at: '2025-03-01T08:20:00' }
+      ],
+      transactions: [
+        { id: 1001, client_id: 101, type: 'transfer', amount: 2500.00, currency: 'EUR', status: 'pending', description: 'Virement professionnel', recipient_name: 'Fournisseur SAS', recipient_iban: 'DE89370400440532013000', created_at: '2026-05-08T10:30:00', executed_at: null },
+        { id: 1002, client_id: 101, type: 'deposit', amount: 500.00, currency: 'EUR', status: 'completed', description: 'Dépôt chèque', recipient_name: null, recipient_iban: null, created_at: '2026-05-07T14:15:00', executed_at: '2026-05-07T14:16:00' },
+        { id: 1003, client_id: 102, type: 'withdrawal', amount: 1200.00, currency: 'EUR', status: 'blocked', description: 'Retrait suspect', recipient_name: 'Inconnu', recipient_iban: 'IT60X0542811101000000123456', created_at: '2026-05-06T09:00:00', executed_at: null }
+      ],
+      codes: [
+        { id: 1, code: '482910', code_type: 'email', recipient: 'jean.d@email.com', is_used: false, is_valid: true, attempts: 0, max_attempts: 3, expires_at: new Date(Date.now() + 10*60000).toISOString(), created_at: new Date().toISOString() },
+        { id: 2, code: '918273', code_type: '2fa', recipient: 'marie.m@email.com', is_used: true, is_valid: true, attempts: 1, max_attempts: 3, expires_at: new Date(Date.now() - 5*60000).toISOString(), created_at: new Date(Date.now() - 15*60000).toISOString() }
+      ],
+      auditLogs: [
+        { id: 1, timestamp: new Date(Date.now() - 300000).toISOString(), action: 'login_success', user_email: 'admin@bitwise.bank', details: 'Connexion admin', severity: 'low', ip_address: '192.168.1.42' },
+        { id: 2, timestamp: new Date(Date.now() - 3600000).toISOString(), action: 'client_update', user_email: 'admin@bitwise.bank', details: 'Modification client #101', severity: 'medium', ip_address: '192.168.1.42' },
+        { id: 3, timestamp: new Date(Date.now() - 86400000).toISOString(), action: 'transaction_block', user_email: 'system', details: 'Transaction #1003 bloquée (AML check)', severity: 'high', ip_address: '127.0.0.1' }
+      ]
+    };
+
+    /* === MOCK API === */
+    const delay = ms => new Promise(r => setTimeout(r, ms + Math.random()*200));
+    const MockAPI = {
+      async login(email, pass) { await delay(400); return { access_token: 'demo_jwt_'+Date.now(), refresh_token: 'demo_refresh', admin_id: MockDB.admin.id, email: MockDB.admin.email, full_name: MockDB.admin.full_name }; },
+      async refresh() { await delay(200); return { access_token: 'demo_jwt_'+Date.now() }; },
+      async get(endpoint) {
+        await delay(150);
+        const url = new URL(`http://mock${endpoint}`);
+        const path = url.pathname;
+        const params = Object.fromEntries(url.searchParams);
+        
+        if(path === '/operations/dashboard') {
+          const active = MockDB.clients.filter(c=>c.account_status==='active').length;
+          const total = MockDB.clients.reduce((a,c)=>a+c.available_balance,0);
+          return { total_clients: MockDB.clients.length, active_clients: active, total_balance: total, timestamp: new Date().toISOString() };
+        }
+        if(path === '/clients') {
+          let res = [...MockDB.clients];
+          if(params.search) res = res.filter(c=>c.full_name.toLowerCase().includes(params.search.toLowerCase())||c.email.includes(params.search));
+          const page = +params.page||1, limit = +params.limit||10;
+          const start = (page-1)*limit;
+          const paginated = res.slice(start, start+limit);
+          return { clients: paginated, total: res.length, pages: Math.ceil(res.length/limit), current_page: page };
+        }
+        if(path.startsWith('/clients/')) {
+          const id = +path.split('/')[2];
+          const c = MockDB.clients.find(x=>x.id===id);
+          if(!c) throw new Error('Client not found');
+          return c;
+        }
+        if(path === '/transactions') {
+          let res = [...MockDB.transactions];
+          if(params.type) res = res.filter(t=>t.type===params.type);
+          if(params.status) res = res.filter(t=>t.status===params.status);
+          const page = +params.page||1, limit = +params.limit||10;
+          const start = (page-1)*limit;
+          return { transactions: res.slice(start, start+limit), total: res.length, pages: Math.ceil(res.length/limit), current_page: page };
+        }
+        if(path === '/codes') {
+          const page = +params.page||1, limit = +params.limit||15;
+          return { codes: MockDB.codes.slice((page-1)*limit, page*limit), total: MockDB.codes.length, pages: 1, current_page: page };
+        }
+        if(path === '/audit') {
+          let res = [...MockDB.auditLogs].reverse();
+          if(params.severity) res = res.filter(l=>l.severity===params.severity);
+          const page = +params.page||1, limit = +params.limit||50;
+          return { logs: res.slice((page-1)*limit, page*limit), total: res.length, pages: Math.ceil(res.length/limit), current_page: page };
+        }
+        return {};
+      },
+      async post(endpoint, body) {
+        await delay(200);
+        if(endpoint === '/transactions') {
+          const newTx = { id: MockDB.transactions.length+1001, client_id: +body.client_id, type: body.type, amount: +body.amount, currency: body.currency||'EUR', status: 'pending', description: body.description||'', recipient_name: body.recipient_name, recipient_iban: body.recipient_iban, created_at: new Date().toISOString(), executed_at: null };
+          MockDB.transactions.unshift(newTx);
+          return { message: 'Created', transaction_id: newTx.id };
+        }
+        if(endpoint === '/codes/generate') {
+          const code = Math.floor(100000 + Math.random() * 900000).toString();
+          const newCode = { id: MockDB.codes.length+1, code, code_type: body.code_type, recipient: body.recipient, is_used: false, is_valid: true, attempts: 0, max_attempts: body.max_attempts||3, expires_at: new Date(Date.now() + (body.expiration_minutes||15)*60000).toISOString(), created_at: new Date().toISOString() };
+          MockDB.codes.unshift(newCode);
+          return { message: 'Generated', code_id: newCode.id, code, expires_at: newCode.expires_at };
+        }
+        if(endpoint.includes('/clients/') && endpoint.endsWith('/suspend')) {
+          const id = +endpoint.split('/')[3]; const c = MockDB.clients.find(x=>x.id===id); if(c) c.account_status='suspended';
+          return { message: 'Suspended' };
+        }
+        if(endpoint.includes('/clients/') && endpoint.endsWith('/activate')) {
+          const id = +endpoint.split('/')[3]; const c = MockDB.clients.find(x=>x.id===id); if(c) c.account_status='active';
+          return { message: 'Activated' };
+        }
+        if(endpoint.includes('/transactions/') && endpoint.includes('/block')) {
+          const id = +endpoint.split('/')[3]; const t = MockDB.transactions.find(x=>x.id===id); if(t) t.status='blocked';
+          return { message: 'Blocked' };
+        }
+        if(endpoint.includes('/transactions/') && endpoint.includes('/execute')) {
+          const id = +endpoint.split('/')[3]; const t = MockDB.transactions.find(x=>x.id===id); if(t) { t.status='completed'; t.executed_at=new Date().toISOString(); }
+          return { message: 'Executed' };
+        }
+        return { message: 'OK' };
+      },
+      async put(endpoint, body) {
+        await delay(200);
+        if(endpoint.includes('/clients/')) {
+          const id = +endpoint.split('/')[3]; const c = MockDB.clients.find(x=>x.id===id);
+          if(c) Object.assign(c, { full_name: body.full_name, phone: body.phone, iban: body.iban, kyc_status: body.kyc_status, account_status: body.account_status, updated_at: new Date().toISOString() });
+          return { message: 'Updated' };
+        }
+        return { message: 'OK' };
+      }
+    };
+
+    /* === UTILS === */
+    const Utils = {
+      toast(msg, type='info') { const c=document.getElementById('toastContainer'), t=document.createElement('div'); t.className=`toast toast-${type}`; t.textContent=msg; c.appendChild(t); setTimeout(()=>t.remove(), 4000); },
+      formatEUR(n) { return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(n||0); },
+      formatDate(iso) { return new Date(iso).toLocaleString('fr-FR'); },
+      escape(html) { const d=document.createElement('div'); d.textContent=html||''; return d.innerHTML; },
+      log(action, details, severity='medium') { MockDB.auditLogs.unshift({ id: Date.now(), timestamp: new Date().toISOString(), action, user_email: Config.ADMIN?.email||'demo', details, severity, ip_address: '192.168.1.10' }); }
+    };
+
+    /* === STATE & API WRAPPER === */
+    const Config = { TOKEN: { access: null, refresh: null }const Config = { API: 'https://URL_DE_TON_BACKEND/api/admin', ... }; ADMIN: null, state: { clientPage:1, txPage:1, codePage:1, auditPage:1, currentClient:null } };
+    const API = {
+      async request(endpoint, opts={}) {
+        const headers = { 'Content-Type':'application/json', ...opts.headers };
+        if(opts.auth && !Config.TOKEN.access) throw new Error('Non authentifié');
+        try {
+          let res;
+          if(opts.method==='GET') res = await MockAPI.get(endpoint);
+          else if(opts.method==='POST') res = await MockAPI.post(endpoint, JSON.parse(opts.body));
+          else if(opts.method==='PUT') res = await MockAPI.put(endpoint, JSON.parse(opts.body));
+          else res = {};
+          return res;
+        } catch(e) { Utils.toast(e.message, 'error'); throw e; }
+      },
+      get: (e) => API.request(e, {auth:true}), post: (e, d) => API.request(e, {auth:true, method:'POST', body:JSON.stringify(d)}), put: (e, d) => API.request(e, {auth:true, method:'PUT', body:JSON.stringify(d)})
+    };
+
+    /* === MODULES === */
+    const Auth = {
+      init() { if(localStorage.getItem('demo_logged')) { Config.ADMIN = JSON.parse(localStorage.getItem('demo_admin')); Config.TOKEN.access='demo'; App.show(); } },
+      async login(email, pass) { const d = await API.request('/auth/login', {method:'POST', body:JSON.stringify({email, password:pass})}); Config.ADMIN={id:d.admin_id, email:d.email, full_name:d.full_name}; Config.TOKEN.access='demo'; localStorage.setItem('demo_logged','1'); localStorage.setItem('demo_admin', JSON.stringify(Config.ADMIN)); App.show(); Utils.toast('Bienvenue, '+Config.ADMIN.full_name, 'success'); Utils.log('login_success', 'Connexion démo'); },
+      logout() { localStorage.removeItem('demo_logged'); localStorage.removeItem('demo_admin'); location.reload(); }
+    };
+    const Theme = {
+      init() { const s=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'); this.set(s,true); document.getElementById('themeToggle').addEventListener('click',()=>this.toggle()); },
+      set(t, silent=false) { if(t==='auto'){document.documentElement.removeAttribute('data-theme');localStorage.removeItem('theme');} else {document.documentElement.setAttribute('data-theme',t);localStorage.setItem('theme',t);} document.getElementById('themeToggle').textContent=(t==='dark'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches))?'☀️':'🌙'; if(!silent) Utils.toast(`Thème ${t}`,'info'); },
+      toggle() { const c=document.documentElement.getAttribute('data-theme')||'light'; this.set(c==='dark'?'light':'dark'); }
+    };
+    const Modal = { open(id){document.getElementById(id).classList.add('open');}, close(id){document.getElementById(id).classList.remove('open');} };
+    const Export = {
+      toCSV(type) {
+        let data=[], filename='';
+        if(type==='transactions'){data=App.cache.tx; filename='transactions.csv';}
+        else if(type==='audit'){data=App.cache.audit; filename='audit.csv';}
+        if(!data.length) return Utils.toast('Rien à exporter','error');
+        const h=Object.keys(data[0]), csv=[h.join(','), ...data.map(r=>h.map(k=>{const v=r[k]; return typeof v==='string'&&(v.includes(',')||v.includes('"'))?`"${v.replace(/"/g,'""')}"`:v}).join(','))].join('\n');
+        const b=new Blob(['\uFEFF'+csv],{type:'text/csv'}), a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=filename; a.click(); Utils.toast('Export CSV téléchargé','success');
+      },
+      toPDF(data, title) {
+        if(!window.jspdf) return Utils.toast('Bibliothèque PDF non chargée (vérifiez internet)','error');
+        const {jsPDF}=window.jspdf; const doc=new jsPDF({orientation:'landscape'});
+        doc.setFontSize(14); doc.text(title,14,15); doc.setFontSize(10); doc.text(`Généré: ${new Date().toLocaleString('fr-FR')}`,14,22);
+        const h=Object.keys(data[0]).map(k=>k.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase()));
+        const rows=data.map(r=>Object.values(r).map(v=>String(v).substring(0,50)));
+        doc.autoTable({head:[h], body:rows, startY:30, styles:{fontSize:8}, headStyles:{fillColor:[30,64,175]}});
+        doc.save('export.pdf'); Utils.toast('PDF téléchargé','success');
+      }
+    };
+    const Charts = {
+      instances: {},
+      init() {
+        try {
+          this.instances.status = new Chart(document.getElementById('statusChart'), { type:'doughnut', data:{labels:['Actif','Suspendu','KYC Pending'], datasets:[{data:[2,1,0], backgroundColor:['#059669','#dc2626','#d97706']}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}} });
+          this.instances.tx = new Chart(document.getElementById('txChart'), { type:'bar', data:{labels:['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'], datasets:[{label:'Transactions', data:[12,19,8,15,22,10,5], backgroundColor:'#1e40af'}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}} });
+          this.instances.balance = new Chart(document.getElementById('balanceChart'), { type:'line', data:{labels:['Jan','Fév','Mar','Avr','Mai','Jun'], datasets:[{label:'Solde moyen (€)', data:[15000,18000,16500,21000,24000,26500], borderColor:'#1e40af', tension:0.3, fill:true, backgroundColor:'rgba(30,64,175,0.1)'}]}, options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true}}} });
+        } catch(e) { console.warn('Chart.js non dispo', e); }
+      },
+      update() {
+        const active=MockDB.clients.filter(c=>c.account_status==='active').length;
+        const suspended=MockDB.clients.filter(c=>c.account_status==='suspended').length;
+        if(this.instances.status) { this.instances.status.data.datasets[0].data=[active, suspended, MockDB.clients.length-active-suspended]; this.instances.status.update(); }
+        if(this.instances.tx) this.instances.tx.update();
+        if(this.instances.balance) this.instances.balance.update();
+      }
+    };
+
+    /* === APP CONTROLLER === */
+    const App = {
+      cache: { tx:[], audit:[] },
+      navTo(page, id=null) {
+        document.querySelectorAll('.nav-link').forEach(l=>l.classList.toggle('active', l.dataset.page===page));
+        document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+        const target = document.getElementById(`page${page.charAt(0).toUpperCase()+page.slice(1)}`);
+        if(target) target.classList.add('active');
+        if(page==='dashboard'){this.loadDashboard(); Charts.update();}
+        if(page==='clients') this.loadClients();
+        if(page==='transactions') this.loadTx();
+        if(page==='codes') this.loadCodes();
+        if(page==='audit') this.loadAudit();
+        if(page==='clientDetail' && id) this.loadClientDetail(id);
+      },
+      show() { document.getElementById('loginView').classList.add('hidden'); document.getElementById('appView').classList.remove('hidden'); document.getElementById('adminInfo').textContent=`👤 ${Config.ADMIN?.full_name||'Admin'}`; this.navTo('dashboard'); },
+      async loadDashboard() { try { const d=await API.get('/operations/dashboard'); document.getElementById('statClients').textContent=d.total_clients?.toLocaleString('fr-FR'); document.getElementById('statActive').textContent=d.active_clients?.toLocaleString('fr-FR'); document.getElementById('statBalance').textContent=Utils.formatEUR(d.total_balance); } catch(e){} },
+      async loadClients(page=1) { try { const s=document.getElementById('clientSearch').value; const d=await API.get(`/clients?page=${page}&limit=10&search=${s}`); document.getElementById('clientsTbody').innerHTML=d.clients.map(c=>`<tr><td>#${c.id}</td><td>${Utils.escape(c.full_name)}</td><td>${Utils.escape(c.email)}</td><td><code>${c.iban?.slice(0,8)}...</code></td><td>${Utils.formatEUR(c.available_balance)}</td><td><span class="badge ${c.kyc_status==='verified'?'badge-active':'badge-pending'}">${c.kyc_status}</span></td><td><span class="badge ${c.account_status==='active'?'badge-active':'badge-blocked'}">${c.account_status}</span></td><td class="actions"><button class="btn btn-sm" onclick="App.navTo('clientDetail','${c.id}')">👁️</button><button class="btn btn-sm btn-warning" onclick="App.toggleClient('${c.id}','${c.account_status}')">${c.account_status==='active'?'⏸️':'▶️'}</button></td></tr>`).join(''); document.getElementById('clientPageInfo').textContent=`Page ${page}/${d.pages}`; document.getElementById('clientPrev').disabled=page<=1; document.getElementById('clientNext').disabled=page>=d.pages; Config.state.clientPage=page; } catch(e){} },
+      async loadClientDetail(id) { try { const c=await API.get(`/clients/${id}`); Config.state.currentClient=c; document.getElementById('clientDetailInfo').innerHTML=`<div class="card"><h3>${Utils.escape(c.full_name)}</h3><p class="text-muted">${Utils.escape(c.email)} • ${Utils.escape(c.phone||'-' )}</p></div><div class="card"><h3>IBAN</h3><p><code>${Utils.escape(c.iban||'-' )}</code></p></div><div class="card"><h3>Solde</h3><p class="stat-value">${Utils.formatEUR(c.available_balance)}</p></div>`; document.getElementById('toggleStatusBtn').textContent=c.account_status==='active'?'⏸️ Suspendre':'▶️ Activer'; document.getElementById('editClientBtn').onclick=()=>Modal.open('editClientModal'); document.getElementById('editClientForm').onsubmit=async(e)=>{e.preventDefault(); await API.put(`/clients/${id}`, {full_name:document.getElementById('editName').value, phone:document.getElementById('editPhone').value, iban:document.getElementById('editIban').value, kyc_status:document.getElementById('editKyc').value, account_status:document.getElementById('editStatus').value}); Modal.close('editClientModal'); Utils.toast('Client mis à jour','success'); Utils.log('client_update', `Modification client #${id}`, 'medium'); this.loadClientDetail(id);}; const tx=MockDB.transactions.filter(t=>t.client_id==id).slice(0,5); document.getElementById('clientTxTbody').innerHTML=tx.map(t=>`<tr><td>#${t.id}</td><td>${t.type}</td><td>${Utils.formatEUR(t.amount)}</td><td><span class="badge ${t.status==='completed'?'badge-active':t.status==='pending'?'badge-pending':'badge-blocked'}">${t.status}</span></td><td>${Utils.formatDate(t.created_at)}</td></tr>`).join(''); } catch(e){} },
+      async toggleClient(id, current) { const action=current==='active'?'suspend':'activate'; if(!confirm(`${action==='suspend'?'Suspendre':'Activer'} ce compte ?`)) return; await API.post(`/clients/${id}/${action}`); Utils.toast(`Compte ${action==='suspend'?'suspendu':'activé'}`, 'success'); Utils.log(`client_${action}`, `Action sur client #${id}`, 'medium'); this.loadClients(Config.state.clientPage); },
+      async loadTx(page=1) { try { const p={page, limit:10}; if(document.getElementById('txTypeFilter').value) p.type=document.getElementById('txTypeFilter').value; if(document.getElementById('txStatusFilter').value) p.status=document.getElementById('txStatusFilter').value; const qs=new URLSearchParams(p).toString(); const d=await API.get(`/transactions?${qs}`); App.cache.tx=d.transactions; document.getElementById('txTbody').innerHTML=d.transactions.map(t=>`<tr><td>#${t.id}</td><td>#${t.client_id}</td><td>${t.type}</td><td>${Utils.formatEUR(t.amount)}</td><td><span class="badge ${t.status==='completed'?'badge-active':t.status==='pending'?'badge-pending':'badge-blocked'}">${t.status}</span></td><td>${Utils.formatDate(t.created_at)}</td><td class="actions">${t.status==='pending'?`<button class="btn btn-sm btn-warning" onclick="App.actionTx(${t.id},'block')">🚫</button><button class="btn btn-sm btn-success" onclick="App.actionTx(${t.id},'execute')">✅</button>`:''}</td></tr>`).join(''); document.getElementById('txPageInfo').textContent=`Page ${page}/${d.pages}`; document.getElementById('txPrev').disabled=page<=1; document.getElementById('txNext').disabled=page>=d.pages; Config.state.txPage=page; } catch(e){} },
+      async actionTx(id, action) { if(!confirm(`${action==='block'?'Bloquer':'Exécuter'} cette transaction ?`)) return; await API.post(`/transactions/${id}/${action}`, action==='block'?{reason:'Blocage admin'}:{}); Utils.toast(`Transaction ${action==='block'?'bloquée':'exécutée'}`, 'success'); Utils.log(`transaction_${action}`, `Action sur tx #${id}`, action==='block'?'high':'medium'); this.loadTx(Config.state.txPage); },
+      async loadCodes(page=1) { try { const d=await API.get(`/codes?page=${page}&limit=15`); document.getElementById('codesTbody').innerHTML=d.codes.map(c=>{const exp=new Date(c.expires_at), now=new Date(), diff=exp-now; const time=diff<0?'Expiré':`${Math.floor(diff/60000)}m ${Math.floor((diff%60000)/1000)}s`; return `<tr><td><strong>${c.code}</strong></td><td>${c.code_type}</td><td><code>${c.recipient}</code></td><td><span class="badge ${c.is_used?'badge-active':'badge-pending'}">${c.is_used?'Utilisé':'Actif'}</span></td><td>${time}</td><td><button class="btn btn-sm" onclick="navigator.clipboard.writeText('${c.code}');Utils.toast('Copié','success')">📋</button></td></tr>`;}).join(''); document.getElementById('codePageInfo').textContent=`Page ${page}/${d.pages}`; document.getElementById('codePrev').disabled=page<=1; document.getElementById('codeNext').disabled=page>=d.pages; Config.state.codePage=page; } catch(e){} },
+      async loadAudit(page=1) { try { const sev=document.getElementById('auditSeverity').value; const d=await API.get(`/audit?page=${page}&limit=50&severity=${sev}`); App.cache.audit=d.logs; document.getElementById('auditTbody').innerHTML=d.logs.map(l=>`<tr><td>${Utils.formatDate(l.timestamp)}</td><td>${Utils.escape(l.action)}</td><td><code>${Utils.escape(l.user_email)}</code></td><td>${Utils.escape(l.details)}</td><td>${l.ip_address||'-'}</td><td><span class="badge ${l.severity==='high'?'badge-blocked':l.severity==='medium'?'badge-pending':'badge-active'}">${l.severity}</span></td></tr>`).join(''); document.getElementById('auditPageInfo').textContent=`Page ${page}/${d.pages}`; document.getElementById('auditPrev').disabled=page<=1; document.getElementById('auditNext').disabled=page>=d.pages; Config.state.auditPage=page; } catch(e){} },
+      bindEvents() {
+        document.getElementById('loginForm').onsubmit=e=>{e.preventDefault(); Auth.login(document.getElementById('loginEmail').value, document.getElementById('loginPass').value);};
+        document.getElementById('logoutBtn').onclick=Auth.logout;
+        document.querySelectorAll('.nav-link').forEach(l=>l.onclick=e=>{e.preventDefault(); this.navTo(l.dataset.page);});
+        document.getElementById('clientSearchBtn').onclick=()=>this.loadClients(1);
+        document.getElementById('clientPrev').onclick=()=>this.loadClients(Config.state.clientPage-1);
+        document.getElementById('clientNext').onclick=()=>this.loadClients(Config.state.clientPage+1);
+        document.getElementById('txFilterBtn').onclick=()=>this.loadTx(1); document.getElementById('txPrev').onclick=()=>this.loadTx(Config.state.txPage-1); document.getElementById('txNext').onclick=()=>this.loadTx(Config.state.txPage+1);
+        document.getElementById('txForm').onsubmit=async e=>{e.preventDefault(); await API.post('/transactions',{client_id:+document.getElementById('txClientId').value, type:document.getElementById('txType').value, amount:+document.getElementById('txAmount').value, currency:document.getElementById('txCurrency').value, recipient_iban:document.getElementById('txIban').value, description:document.getElementById('txDesc').value}); Modal.close('txModal'); Utils.toast('Transaction créée','success'); Utils.log('transaction_create', 'Nouvelle transaction démo', 'low'); this.loadTx(1);};
+        document.getElementById('codePrev').onclick=()=>this.loadCodes(Config.state.codePage-1); document.getElementById('codeNext').onclick=()=>this.loadCodes(Config.state.codePage+1);
+        document.getElementById('codeForm').onsubmit=async e=>{e.preventDefault(); await API.post('/codes/generate',{code_type:document.getElementById('codeType').value, recipient:document.getElementById('codeRecipient').value, expiration_minutes:+document.getElementById('codeExpiry').value}); Modal.close('codeModal'); Utils.toast('Code généré','success'); Utils.log('code_generate', 'Code OTP généré', 'low'); this.loadCodes(1);};
+        document.getElementById('toggleStatusBtn').onclick=()=>{const c=Config.state.currentClient; if(c) this.toggleClient(c.id, c.account_status);};
+        document.getElementById('auditSeverity').onchange=()=>this.loadAudit(1); document.getElementById('auditPrev').onclick=()=>this.loadAudit(Config.state.auditPage-1); document.getElementById('auditNext').onclick=()=>this.loadAudit(Config.state.auditPage+1); document.getElementById('auditExportBtn').onclick=()=>Export.toCSV('audit');
+      },
+      init() { Theme.init(); Auth.init(); Charts.init(); this.bindEvents(); }
+    };
+    document.addEventListener('DOMContentLoaded', ()=>App.init());
+  </script>
+</body>
+</html>
